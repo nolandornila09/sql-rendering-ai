@@ -1,0 +1,34 @@
+WITH filtered_sales AS (
+    SELECT
+        order_id,
+        order_date,
+        net_amount,
+        discount_percent
+    FROM v_sales_lines
+    WHERE tenant_id = @tenant_id
+      AND CAST(STRPTIME(order_date,'%m/%d/%Y') AS DATE)  BETWEEN 
+          CAST(CAST(@as_of_date AS DATE) - INTERVAL '@window_days DAY' AS DATE)
+          AND CAST(@as_of_date AS DATE)
+),
+banded_sales AS (
+    SELECT
+        CASE 
+            WHEN discount_percent BETWEEN 0 AND 5 THEN '0-5%'
+            WHEN discount_percent > 5 AND discount_percent <= 10 THEN '5-10%'
+            WHEN discount_percent > 10 AND discount_percent <= 20 THEN '10-20%'
+            ELSE '20%+'
+        END AS discount_band,
+        net_amount
+    FROM filtered_sales
+)
+SELECT
+    discount_band,
+    SUM(net_amount) AS gmv_per_band,
+    ROUND(SUM(net_amount) * 100.0 / SUM(SUM(net_amount)) OVER (), 2) AS pct_of_total_gmv
+FROM banded_sales
+GROUP BY discount_band
+ORDER BY 
+CASE WHEN @sort_direction = 'ASC'  THEN discount_band
+         WHEN @sort_direction = 'DESC' THEN -discount_band
+    END
+LIMIT @limit;

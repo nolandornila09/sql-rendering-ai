@@ -1,0 +1,22 @@
+{
+  "template_id": "cashback_liability_velocity_30d",
+  "description": "Which customers’ unredeemed cash-back increased by ≥ ₱X over the last 30 days?",
+  "required_filters": ["tenant_id", "as_of_date"],
+  "defaults": {
+    "window_days": 30,
+    "min_delta": 5000,
+    "sort_direction" : "DESC",
+    "limit" : 100
+  },
+  "projected_columns": [
+    "customer_id",
+    "liability_30d_ago",
+    "liability_today",
+    "delta_liability",
+    "yyyy_mm"
+  ],
+  "partitions": ["yyyy_mm"],
+   "parquet_views": {
+    "v_cashback_balance_daily": "v_cashback_balance_daily.parquet"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "freight_ratio_anomalies",
+  "description": "List orders where freight_fee / net_amount ≥ @min_ratio within a date range.",
+  "required_filters": ["tenant_id","from_date","to_date","min_ratio","min_net"],
+  "params": {
+    "@tenant_id": "string - required tenant identifier",
+    "@from_date": "date - start of 30-day window",
+    "@to_date": "date - end of 30-day window",
+    "@min_ratio": "decimal - minimum freight/net threshold, default 0.15",
+    "@min_net": "decimal - optional minimum net amount to filter out small orders"
+  },
+  "defaults": {
+    "min_ratio": 0.15,
+    "min_net": 1000,
+    "sort_direction" : "DESC",
+    "limit" : 100
+  },
+   "partitions": ["yyyy_mm"],
+  "parquet_views": {
+    "v_sales_lines": "v_sales_lines.parquet"
+  }
+  }

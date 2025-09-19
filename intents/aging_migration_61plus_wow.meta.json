@@ -1,0 +1,20 @@
+{
+  "template_id": "aging_migration_61plus_wow",
+  "description": "Detect customers whose 61+ day overdue balances are rising week-over-week.",
+  "required_filters": ["tenant_id", "as_of_date"],
+  "defaults": {
+    "weeks": 8,
+    "min_delta": 1000,
+    "sort_direction" : "DESC",
+    "limit" : 100
+  },
+  "projected_columns": [
+    "customer_id",
+    "week_start",
+    "overdue_61_plus",
+    "delta_wow"
+  ],
+  "partitions": ["tenant_id", "yyyy_mm"],
+   "parquet_views": {
+    "v_ar_aging_bucketed_daily": "v_ar_aging_bucketed_daily.parquet"
+  }}

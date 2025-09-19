@@ -1,0 +1,16 @@
+{
+  "template_id": "cashback_redemption_ratio_trend",
+  "description": "Plot weekly redeemed/accrued cash-back ratio for the last N weeks.",
+  "required_filters": ["tenant_id", "as_of_date"],
+  "defaults": {
+    "weeks": 12,
+    "sort_direction" : "DESC",
+    "limit" : 100
+  },
+  "partitions": [
+    "yyyy_mm"
+  ],
+   "parquet_views": {
+        "v_cashback_events_daily": "v_cashback_events_daily.parquet"
+    }
+}

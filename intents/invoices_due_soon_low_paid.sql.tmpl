@@ -1,0 +1,40 @@
+/* invoices_due_soon_low_paid.sql.tmpl */
+
+WITH base_invoices AS (
+    SELECT
+        invoice_id,
+        customer_id,
+        invoice_date,
+        due_date,
+        amount,
+        paid_to_date,
+        last_payment_date,
+        status,
+        yyyy_mm
+    FROM v_invoices_ledger
+    WHERE tenant_id = @tenant_id
+      AND CAST(due_date AS DATE) BETWEEN CAST(@as_of_date AS DATE)
+                                      AND CAST(@as_of_date AS DATE) + INTERVAL '@due_in_days DAYS'
+      AND amount >= @min_amount
+)
+SELECT
+    invoice_id,
+    customer_id,
+    invoice_date,
+    due_date,
+    amount,
+    paid_to_date,
+    ROUND(paid_to_date / NULLIF(amount, 0), 2) AS paid_ratio,
+    (1 - (paid_to_date / NULLIF(amount, 0))) AS unpaid_ratio,
+    last_payment_date,
+    status
+FROM base_invoices
+WHERE (1 - (paid_to_date / NULLIF(amount, 0))) >= @min_unpaid_pct
+ORDER BY  
+CASE WHEN @sort_direction = 'ASC'  THEN due_date
+         WHEN @sort_direction = 'DESC' THEN -due_date
+    END,
+CASE WHEN @sort_direction = 'ASC'  THEN unpaid_ratio
+         WHEN @sort_direction = 'DESC' THEN -unpaid_ratio
+    END
+LIMIT @limit;

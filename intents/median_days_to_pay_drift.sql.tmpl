@@ -1,0 +1,35 @@
+WITH base AS (
+    SELECT
+        customer_id,
+        DATE_TRUNC('week', CAST(strptime(invoice_date, '%m/%d/%Y') AS DATE)) AS week_start,
+        days_to_pay
+    FROM v_invoices_closed
+    WHERE tenant_id = @tenant_id
+      AND CAST(strptime(invoice_date, '%m/%d/%Y') AS DATE) 
+            BETWEEN date_add(CAST(@as_of_date AS DATE), -(@weeks * 7))
+                AND CAST(@as_of_date AS DATE)
+),
+weekly_median AS (
+    SELECT
+        customer_id,
+        week_start,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_pay) AS median_days_to_pay
+    FROM base
+    GROUP BY customer_id, week_start
+),
+drift AS (
+    SELECT
+        customer_id,
+        MAX(median_days_to_pay) - MIN(median_days_to_pay) AS delta_days
+    FROM weekly_median
+    GROUP BY customer_id
+)
+SELECT
+    customer_id,
+    delta_days
+FROM drift
+WHERE delta_days >= @min_delta_days
+CASE WHEN @sort_direction = 'ASC'  THEN delta_days
+         WHEN @sort_direction = 'DESC' THEN -delta_days
+    END
+LIMIT @limit;

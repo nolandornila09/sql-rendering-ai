@@ -1,0 +1,14 @@
+{
+  "template_id": "order_outliers_zscore",
+  "required_filters": ["tenant_id", "from_date", "to_date"],
+  "defaults": { 
+    "z": 3 ,
+    "sort_direction" : "DESC",
+    "limit" : 100
+  },
+  "projected_columns": ["order_id", "order_date", "yyyy_mm", "net_amount", "zscore"],
+  "partitions": ["yyyy_mm"],
+  "parquet_views": {
+    "v_sales_lines": "v_sales_lines.parquet"
+  }
+}

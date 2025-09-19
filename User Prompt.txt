@@ -1,0 +1,170 @@
+
+Endpoint : http://18.139.107.202:8083/query
+
+1) AR Spike Detector (14d vs 60d)
+ • Prompt: “Which customers had a sharp spike in overdue in the last 14 days compared 
+	to the prior 60 days (as-of today)?”
+ • Template: ar_spike_14v60.sql.tmpl
+ Payload : 
+	{
+	  "template_id": "ar_spike_14v60",
+	  "params": {
+		"tenant_id": 1111,
+		"as_of_date": "2025-08-25",
+		"short_win": 14,
+		"base_win": 60,
+		"min_spike_pct": 0.5
+	  },
+	  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+	  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+	}
+
+2) At-Risk Invoices with Low Paid Ratio (due soon)
+ • Prompt: “Show invoices due in the next 7 days with paid_to_date < 50%.”
+ • Template: invoices_due_soon_low_paid.sql.tmpl
+Payload :
+	{
+	  "template_id": "invoices_due_soon_low_paid",
+	  "params": {
+		"tenant_id": 1001,
+		"as_of_date": "2025-09-01",
+		"due_in_days": 7,
+		"min_unpaid_pct": 0.5,
+		"min_amount": 100
+	  },
+	  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+	  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+	}
+3) Revenue Acceleration (7d vs 28d)
+ • Prompt: “Which customers show 7-day GMV growth > 25% vs the 28-day baseline?”
+ • Template: gmv_acceleration_7v28.sql.tmpl
+Payload : 
+	{
+	  "template_id": "gmv_acceleration_7v28",
+	  "params": {
+		"tenant_id": 1111,
+		"as_of_date": "2025-08-31",
+		"short_win": 7,
+		"base_win": 28,
+		"min_accel": 0.25
+	  },
+	  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+	  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+	}
+4.  Large-Order Outliers (Z-score per month)
+ • Prompt: “Flag order outliers: Z-score > 3 by month (last 90 days).”
+ • Template: order_outliers_zscore.sql.tmpl
+Payload :
+	 {
+	  "template_id": "order_outliers_zscore",
+	  "params": {
+		"tenant_id": 1111,
+		"from_date": "2025-06-01",
+		"to_date": "2025-09-01",
+		"z": 3
+	  },
+		"template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+		"parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+	}
+5.  Cash-Back Liability Velocity (30d)
+ • Prompt: “Which customers’ unredeemed cash-back increased by ≥ ₱X over the last 30 
+days?”
+ • Template: cashback_liability_velocity_30d.sql.tmpl
+Payload : 
+	{
+	  "template_id": "cashback_liability_velocity_30d",
+	  "params": {
+		"tenant_id": 1111,
+		"as_of_date": "2025-09-10",
+		"window_days": 30,
+		"min_delta": 5000
+	  },
+		"template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+		"parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+	}
+6.  Payment Latency Drift (weekly median)
+ • Prompt: “Which customers’ median days-to-pay increased by ≥ 5 days in the last 8 
+weeks?”
+ • Template: median_days_to_pay_drift.sql.tmp
+ Payload :
+ {
+  "template_id": "median_days_to_pay_drift",
+  "params": {
+    "tenant_id": 1111,
+    "as_of_date": "2025-08-31",
+    "weeks": 8,
+    "min_delta_days": 5
+  },
+  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+}
+7.  Freight Heavy Orders (ratio threshold)
+ • Prompt: “List orders where freight_fee / net_amount ≥ 15% in the last 30 days.”
+ • Template: freight_ratio_anomalies.sql.tmpl
+ Payload :
+{
+  "template_id": "freight_ratio_anomalies",
+  "params": {
+    "tenant_id": 1111,
+    "from_date": "2025-08-12",
+    "to_date": "2025-09-12",
+    "min_ratio": 0.15,
+    "min_net": 100
+  },
+  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+}
+8.  Discount Band Mix (last 90 days)
+ • Prompt: “What % of GMV falls into discount bands (0–5%, 5–10%, 10–20%, 20%+) 
+over the last 90 days?”
+• Template: discount_band_mix_90d.sql.tmpl
+Payload :
+{
+   "template_id": "discount_band_mix_90d",
+  "params": {
+    "tenant_id": "1111",
+    "as_of_date": "2025-07-12",
+    "window_days": 90
+  },
+  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+}
+9.  Cash-Back Redemption Ratio Trend (weekly)
+ • Prompt: “Plot weekly redeemed / accrued cash-back ratio for the last 12 weeks.”
+ • Template: cashback_redemption_ratio_trend.sql.tmpl
+ Payload : 
+ {
+  "template_id": "cashback_redemption_ratio_trend",
+  "params": {
+    "tenant_id": 1111,
+    "as_of_date": "2025-09-14",
+    "weeks": 12
+  },
+  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+}
+10. Aging Migration to 61+ Bucket (week-over-week)
+ • Prompt: “Which customers show rising 61+ day overdue week-over-week?”
+ • Template: aging_migration_61plus_wow.sql.tmpl
+ Payload : 
+ {
+  "template_id": "aging_migration_61plus_wow",
+  "params": {
+    "tenant_id": 1111,
+    "as_of_date": "2025-09-14",
+    "weeks": 5,
+    "min_delta": 200
+  },
+  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Template",
+  "parquet_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Nolan Test Parquet/"
+
+}
+

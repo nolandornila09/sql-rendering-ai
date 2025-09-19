@@ -1,0 +1,23 @@
+{
+  "template_id": "test_truncate",
+  "description": "Detect customers whose median days-to-pay increased by at least X days over the last N weeks.",
+  "required_filters": ["tenant_id", "as_of_date"],
+  "defaults": {
+    "weeks": 8,
+    "min_delta_days": 5
+  },
+   "param_formats": {
+    "tenant_id": "integer",
+    "as_of_date": "date (YYYY-MM-DD)",
+    "weeks": "integer (number of weeks to look back)",
+    "min_delta_days": "integer (minimum increase in median days-to-pay)"
+  },
+  "projected_columns": [
+    "customer_id",
+    "delta_days"
+  ],
+  "partitions": ["yyyy_mm"],
+  "parquet_views": {
+    "v_invoices_closed": "v_invoices_closed.parquet"
+  }
+  }

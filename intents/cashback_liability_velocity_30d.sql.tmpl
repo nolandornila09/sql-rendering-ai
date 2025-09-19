@@ -1,0 +1,43 @@
+WITH base AS (
+    SELECT
+        customer_id,
+        as_of_date,
+        unredeemed_liability,
+        yyyy_mm
+    FROM v_cashback_balance_daily
+    WHERE tenant_id = @tenant_id
+      AND STRPTIME(as_of_date, '%m/%d/%Y') IN (
+          CAST(@as_of_date AS DATE),
+          CAST(@as_of_date AS DATE) - INTERVAL @window_days DAY
+      )
+),
+pivoted AS (
+    SELECT
+        customer_id,
+        MAX(CASE WHEN STRPTIME(as_of_date, '%m/%d/%Y') = CAST(@as_of_date AS DATE)
+                 THEN unredeemed_liability END) AS liability_today,
+        MAX(CASE WHEN STRPTIME(as_of_date, '%m/%d/%Y') = CAST(@as_of_date AS DATE) - INTERVAL @window_days DAY
+                 THEN unredeemed_liability END) AS liability_past
+    FROM base
+    GROUP BY customer_id
+),
+calc AS (
+    SELECT
+        customer_id,
+        liability_past,
+        liability_today,
+        (liability_today - liability_past) AS delta_liability
+    FROM pivoted
+)
+SELECT
+    customer_id,
+    liability_past AS liability_@window_daysd_ago,
+    liability_today,
+    delta_liability,
+    CAST(STRFTIME('%Y%m', CAST(@as_of_date AS DATE)) AS INT) AS yyyy_mm
+FROM calc
+WHERE delta_liability >= @min_delta
+ORDER BY  CASE WHEN @sort_direction = 'ASC'  THEN delta_liability
+         WHEN @sort_direction = 'DESC' THEN -delta_liability
+    END
+LIMIT @limit;

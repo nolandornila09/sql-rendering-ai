@@ -1,0 +1,9 @@
+    {
+    "rules": {
+        "max_window_days": 365,
+        "disallow_future_as_of": true,
+        "row_limit": 10000,
+        "allowed_actions": ["SELECT","WITH"],
+        "disallowed_actions": ["DELETE","TRUNCATE","UPDATE","INSERT","DROP","ALTER","CREATE"]
+    }
+    }

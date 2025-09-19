@@ -1,0 +1,41 @@
+WITH s AS (
+    SELECT 
+        customer_id,
+        CAST(order_date AS DATE) AS order_date,
+        gmv,
+        yyyy_mm
+    FROM v_sales_daily
+    WHERE tenant_id = @tenant_id
+      AND CAST(order_date AS DATE) BETWEEN CAST(@as_of_date AS DATE) - INTERVAL '@base_win DAYS'
+                                      AND CAST(@as_of_date AS DATE)
+      AND yyyy_mm >= (YEAR(CAST(@as_of_date AS DATE) - INTERVAL '@base_win DAYS') * 100
+                      + MONTH(CAST(@as_of_date AS DATE) - INTERVAL '@base_win DAYS'))
+)
+SELECT
+    customer_id,
+    SUM(CASE WHEN CAST(order_date AS DATE) > CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+             THEN gmv ELSE 0 END) AS gmv_7d,
+    SUM(CASE WHEN CAST(order_date AS DATE) <= CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+             THEN gmv ELSE 0 END) AS gmv_28d,
+    CASE
+        WHEN SUM(CASE WHEN CAST(order_date AS DATE) <= CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+                      THEN gmv ELSE 0 END) > 0
+        THEN 1.0 * SUM(CASE WHEN CAST(order_date AS DATE) > CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+                             THEN gmv ELSE 0 END) /
+             (SUM(CASE WHEN CAST(order_date AS DATE) <= CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+                       THEN gmv ELSE 0 END) / 4.0) - 1.0
+        ELSE NULL
+    END AS accel_pct
+FROM s
+GROUP BY customer_id
+HAVING SUM(CASE WHEN CAST(order_date AS DATE) <= CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+                THEN gmv ELSE 0 END) > 0
+   AND (1.0 * SUM(CASE WHEN CAST(order_date AS DATE) > CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+                        THEN gmv ELSE 0 END) /
+        (SUM(CASE WHEN CAST(order_date AS DATE) <= CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS' 
+                  THEN gmv ELSE 0 END) / 4.0) - 1.0) >= @min_accel
+ORDER BY accel_pct 
+CASE WHEN @sort_direction = 'ASC'  THEN accel_pct
+         WHEN @sort_direction = 'DESC' THEN -accel_pct
+    END
+LIMIT @limit;

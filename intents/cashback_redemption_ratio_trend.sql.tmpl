@@ -1,0 +1,37 @@
+WITH weekly_cashback AS (
+    SELECT
+        tenant_id,
+        CAST(strftime(CAST(as_of_date AS DATE), '%Y') AS INTEGER) AS year_no,
+        CAST(strftime(CAST(as_of_date AS DATE), '%V') AS INTEGER) AS week_no,
+        yyyy_mm,
+        SUM(accrued_amount) AS accrued,
+        SUM(redeemed_amount) AS redeemed
+    FROM v_cashback_events_daily
+    WHERE tenant_id = @tenant_id
+      AND CAST(as_of_date AS DATE)
+            BETWEEN date_add(CAST(@as_of_date AS DATE), -(@weeks * 7))
+                AND CAST(@as_of_date AS DATE)
+    GROUP BY tenant_id,
+             strftime(CAST(as_of_date AS DATE), '%Y'),
+             strftime(CAST(as_of_date AS DATE), '%V'),
+             yyyy_mm
+)
+SELECT
+    tenant_id,
+    year_no,
+    week_no,
+    yyyy_mm,
+    accrued,
+    redeemed,
+    CASE WHEN accrued = 0 THEN 0 
+         ELSE CAST(redeemed AS DOUBLE) / accrued 
+    END AS redemption_ratio
+FROM weekly_cashback
+ORDER BY 
+ CASE WHEN @sort_direction = 'ASC'  THEN year_no
+         WHEN @sort_direction = 'DESC' THEN -year_no
+    END,
+CASE WHEN @sort_direction = 'ASC'  THEN week_no
+         WHEN @sort_direction = 'DESC' THEN -week_no
+    END
+LIMIT @limit;;

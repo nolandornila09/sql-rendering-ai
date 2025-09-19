@@ -1,0 +1,16 @@
+{
+  "template_id": "gmv_acceleration_7v28.sql",
+   "required_filters": ["tenant_id", "as_of_date"],
+  "defaults": { 
+    "short_win": 14, 
+    "base_win": 60, 
+    "min_spike_pct": 0.5 ,
+    "sort_direction" : "DESC",
+    "limit" : 100
+  },
+  "projected_columns": ["customer_id","overdue_14d","overdue_prev_60d","spike_pct"],
+  "partitions": ["yyyy_mm"],
+  "parquet_views": {
+    "v_sales_daily": "v_gmv_acceleration.parquet"
+  }
+}
