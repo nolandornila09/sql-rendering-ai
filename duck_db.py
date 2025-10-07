@@ -13,7 +13,7 @@ from azure.storage.blob import BlobServiceClient
 from datetime import datetime
 import logging
 from opencensus.ext.azure.log_exporter import AzureLogHandler
-import pyodbc
+
 # -------------------------------
 # Setup
 # -------------------------------
@@ -194,58 +194,32 @@ def normalize_date(d: str) -> str:
 # -------------------------------
 # Execute SQL with Telemetry
 # -------------------------------
-
 def execute_sql(sql_template: str, meta: dict, params: dict, parquet_dir: str, policy: dict):
-    # Build final SQL
+    con = duckdb.connect(database=":memory:")
+    account_name = os.getenv("AZURE_STORAGE_ACCOUNT_NAME")
+    account_key = os.getenv("AZURE_STORAGE_ACCOUNT_KEY")
+
+    for view_name, parquet_file in meta.get("parquet_views", {}).items():
+        abs_path = os.path.join(parquet_dir, parquet_file)
+        if abs_path.startswith(("abfs://", "abfss://")):
+            df = read_parquet_with_fallback(abs_path, account_name, account_key)
+            con.register(view_name, df)
+        else:
+            con.execute(f"CREATE VIEW {view_name} AS SELECT * FROM read_parquet('{abs_path}')")
+
     final_sql = substitute_params(sql_template, params)
-    print(final_sql)
-    # Validate policy before execution
     validate_policy(params, final_sql, policy)
 
-    # Connection string (from env)
-    # conn_str = os.getenv("SYNAPSE_ODBC_CONN")
-    conn_str = (
-    "Driver={ODBC Driver 17 for SQL Server};"
-    "Server=tcp:phoenix-dev-workspace.sql.azuresynapse.net,1433;"
-    "Database=dedicated_SQLPool_dev;"
-    "Authentication=ActiveDirectoryInteractive;"
-    "UID=nitishgirkar@ClickTekConsultingInc.onmicrosoft.com;"
-    "PWD=Zavadya@2022;"
-    "Encrypt=yes;"
-    "TrustServerCertificate=no;"
-    "Connection Timeout=30;"
-)
-    if not conn_str:
-        raise RuntimeError("Missing SYNAPSE_ODBC_CONN in environment")
-
     start_time = time.time()
-    row_count, bytes_consumed = 0, 0
-    results = []
-
-    try:
-        with pyodbc.connect(conn_str) as conn:
-            with conn.cursor() as cur:
-                cur.execute(final_sql)
-                columns = [col[0] for col in cur.description] if cur.description else []
-
-                for row in cur.fetchall():
-                    record = dict(zip(columns, row))
-                    results.append(record)
-
-                row_count = len(results)
-                # Approximate bytes consumed (stringify rows)
-                bytes_consumed = sum(len(str(r)) for r in results)
-
-    except Exception as e:
-        raise RuntimeError(f"SQL execution failed: {e}")
-
+    df = con.execute(final_sql).fetchdf()
     duration_ms = int((time.time() - start_time) * 1000)
 
-    # Apply row limit if policy has it
     row_limit = policy.get("rules", {}).get("row_limit")
-    if row_limit and row_count > row_limit:
-        results = results[:row_limit]
-        row_count = len(results)
+    if row_limit and len(df) > row_limit:
+        df = df.head(row_limit)
+
+    row_count = len(df)
+    bytes_consumed = df.memory_usage(deep=True).sum()
 
     logger.info(
         "SQL executed",
@@ -260,8 +234,7 @@ def execute_sql(sql_template: str, meta: dict, params: dict, parquet_dir: str, p
         },
     )
 
-    return results
-
+    return df.to_dict(orient="records")
 
 # -------------------------------
 # API Endpoint
