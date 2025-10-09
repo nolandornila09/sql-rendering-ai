@@ -33,6 +33,7 @@ Payload :
     "min_amount": 100
   },
   "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Templates"
+  }
 3) Revenue Acceleration (7d vs 28d)
  • Prompt: “Which customers show 7-day GMV growth > 25% vs the 28-day baseline?”
  • Template: gmv_acceleration_7v28.sql.tmpl
@@ -151,6 +152,6 @@ Payload :
     "weeks": 5,
     "min_delta": 200
   },
-  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/TemplateS"
+  "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Templates"
 }
 

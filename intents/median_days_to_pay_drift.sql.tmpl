@@ -31,6 +31,7 @@ SELECT TOP @limit
     delta_days
 FROM drift
 WHERE delta_days >= @min_delta_days
+ORDER BY
 CASE WHEN @sort_direction = 'ASC'  THEN delta_days
          ELSE -delta_days
     END;
