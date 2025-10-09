@@ -3,14 +3,16 @@ WITH stats AS (
     yyyy_mm,
     net_amount,
     (net_amount - AVG(net_amount) OVER (PARTITION BY yyyy_mm))
-      / NULLIF(STDDEV(net_amount) OVER (PARTITION BY yyyy_mm),0) AS zscore,
+      / NULLIF(STDEV(net_amount) OVER (PARTITION BY yyyy_mm), 0) AS zscore,
     order_id,
-     STRPTIME(order_date, '%m/%d/%Y') as order_date
-  FROM v_sales_lines
+    CAST(order_date AS DATE) AS order_date
+  FROM curated.v_sales_lines
   WHERE tenant_id = @tenant_id
-    AND STRPTIME(order_date, '%m/%d/%Y') BETWEEN @from_date AND @to_date
+    AND CAST(order_date AS DATE)
+        BETWEEN CAST(@from_date AS DATE) AND CAST(@to_date AS DATE)
 )
-SELECT
+
+SELECT TOP (@limit)
   order_id,
   order_date,
   yyyy_mm,
@@ -18,8 +20,4 @@ SELECT
   zscore
 FROM stats
 WHERE ABS(zscore) > @z
-ORDER BY 
-CASE WHEN @sort_direction = 'ASC'  THEN order_date
-         WHEN @sort_direction = 'DESC' THEN -order_date
-    END
-LIMIT @limit;
+ORDER BY order_date DESC

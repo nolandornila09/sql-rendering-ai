@@ -1,22 +1,22 @@
 WITH weekly_cashback AS (
     SELECT
         tenant_id,
-        CAST(strftime(CAST(as_of_date AS DATE), '%Y') AS INTEGER) AS year_no,
-        CAST(strftime(CAST(as_of_date AS DATE), '%V') AS INTEGER) AS week_no,
+        YEAR(CAST(as_of_date AS DATE)) AS year_no,
+        DATEPART(wk, CAST(as_of_date AS DATE)) AS week_no,
         yyyy_mm,
         SUM(accrued_amount) AS accrued,
         SUM(redeemed_amount) AS redeemed
-    FROM v_cashback_events_daily
+    FROM curated.v_cashback_events_daily
     WHERE tenant_id = @tenant_id
       AND CAST(as_of_date AS DATE)
-            BETWEEN date_add(CAST(@as_of_date AS DATE), -(@weeks * 7))
+            BETWEEN DATEADD(DAY,-(@weeks * 7),CAST(@as_of_date AS DATE) )
                 AND CAST(@as_of_date AS DATE)
     GROUP BY tenant_id,
-             strftime(CAST(as_of_date AS DATE), '%Y'),
-             strftime(CAST(as_of_date AS DATE), '%V'),
+            YEAR(CAST(as_of_date AS DATE)),
+            DATEPART(wk, CAST(as_of_date AS DATE)) ,
              yyyy_mm
 )
-SELECT
+SELECT TOP @limit
     tenant_id,
     year_no,
     week_no,
@@ -24,14 +24,13 @@ SELECT
     accrued,
     redeemed,
     CASE WHEN accrued = 0 THEN 0 
-         ELSE CAST(redeemed AS DOUBLE) / accrued 
+         ELSE CAST(redeemed AS FLOAT) / accrued 
     END AS redemption_ratio
 FROM weekly_cashback
 ORDER BY 
  CASE WHEN @sort_direction = 'ASC'  THEN year_no
-         WHEN @sort_direction = 'DESC' THEN -year_no
+         ELSE -year_no
     END,
 CASE WHEN @sort_direction = 'ASC'  THEN week_no
-         WHEN @sort_direction = 'DESC' THEN -week_no
-    END
-LIMIT @limit;;
+         ELSE -week_no
+    END;

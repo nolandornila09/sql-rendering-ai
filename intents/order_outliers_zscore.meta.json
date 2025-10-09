@@ -6,9 +6,14 @@
     "sort_direction" : "DESC",
     "limit" : 100
   },
+  "param_formats": {
+    "tenant_id": "string",
+    "from_date": "date (YYYY-MM-DD)",
+    "to_date": "date (YYYY-MM-DD)",
+    "z": "integer",
+    "sort_direction" : "string",
+    "limit" : "integer"
+  },
   "projected_columns": ["order_id", "order_date", "yyyy_mm", "net_amount", "zscore"],
-  "partitions": ["yyyy_mm"],
-  "parquet_views": {
-    "v_sales_lines": "v_sales_lines.parquet"
-  }
+  "partitions": ["tenant_id","yyyy_mm"]
 }

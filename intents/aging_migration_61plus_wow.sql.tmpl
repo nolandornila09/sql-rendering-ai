@@ -1,13 +1,13 @@
 WITH weekly_aging AS (
     SELECT
         customer_id,
-         DATE_TRUNC('week', CAST(as_of_date AS DATE)) AS week_start,
+         DATEADD(WEEK, DATEDIFF(WEEK, 0, CAST(as_of_date AS DATE)), 0) AS week_start,
         SUM(bucket_61_90 + bucket_90_plus) AS overdue_61_plus
-    FROM v_ar_aging_bucketed_daily
+    FROM curated.v_ar_aging_bucketed_daily
     WHERE tenant_id = @tenant_id
-      AND CAST(as_of_date AS DATE) BETWEEN date_add(CAST(@as_of_date AS DATE), -(@weeks * 7))
+      AND CAST(as_of_date AS DATE) BETWEEN dateadd(DAY, -(@weeks * 7),CAST(@as_of_date AS DATE))
                 AND CAST(@as_of_date AS DATE)
-    GROUP BY customer_id, DATE_TRUNC('week', CAST(as_of_date AS DATE))
+    GROUP BY customer_id, DATEADD(WEEK, DATEDIFF(WEEK, 0, CAST(as_of_date AS DATE)), 0)
 ),
 deltas AS (
     SELECT
@@ -17,7 +17,7 @@ deltas AS (
         overdue_61_plus - LAG(overdue_61_plus) OVER (PARTITION BY customer_id ORDER BY week_start) AS delta_wow
     FROM weekly_aging
 )
-SELECT
+SELECT TOP @limit
     customer_id,
     week_start,
     overdue_61_plus,
@@ -26,6 +26,5 @@ FROM deltas
 WHERE delta_wow >=  @min_delta 
 ORDER BY
 CASE WHEN @sort_direction = 'ASC'  THEN delta_wow
-         WHEN @sort_direction = 'DESC' THEN -delta_wow
-    END
-LIMIT @limit;
+         ELSE -delta_wow
+    END;

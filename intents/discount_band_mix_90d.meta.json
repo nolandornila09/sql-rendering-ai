@@ -1,37 +1,22 @@
 {
   "template_id": "discount_band_mix_90d",
-  "description": "Shows what % of GMV falls into discount bands (0-5%, 5-10%, 10-20%, 20%+) over the last N days.",
   "required_filters": ["tenant_id", "as_of_date"],
   "defaults": {
     "window_days": 90,
     "sort_direction" : "DESC",
     "limit" : 100
   },
-  "parameters": [
-    {
-      "name": "tenant_id",
-      "type": "string",
-      "description": "Tenant to analyze"
-    },
-    {
-      "name": "as_of_date",
-      "type": "date",
-      "description": "Reference date for the analysis"
-    },
-    {
-      "name": "window_days",
-      "type": "integer",
-      "description": "Number of days to look back",
-      "default": 90
-    }
-  ],
+ "param_formats": {
+    "tenant_id": "string",
+    "from_date": "date (YYYY-MM-DD)",
+    "window_days": "integer",
+    "sort_direction" : "string",
+    "limit" : "integer"
+  },
   "output_columns": [
     "discount_band",
     "gmv_per_band",
     "pct_of_total_gmv"
   ],
-    "partitions": ["yyyy_mm"],
-    "parquet_views": {
-        "v_sales_lines": "v_sales_lines.parquet"
-    }
+    "partitions": ["tenant_id","yyyy_mm"]
     }

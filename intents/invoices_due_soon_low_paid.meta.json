@@ -1,6 +1,5 @@
 {
   "template_id": "invoices_due_soon_low_paid",
-  "description": "Invoices due in the next N days where paid ratio < 50% (at-risk).",
   "required_filters": ["tenant_id", "as_of_date"],
   "defaults": {
     "due_in_days": 7,
@@ -8,6 +7,15 @@
     "min_amount": 100,
     "sort_direction" : "DESC",
     "limit" : 100
+  },
+  "param_formats": {
+    "tenant_id": "string",
+    "as_of_date": "date (YYYY-MM-DD)",
+    "due_in_days": "integer",
+    "min_unpaid_pct": "decimal,integer" , 
+    "min_amount": "integer",
+    "sort_direction" : "string",
+    "limit" : "integer"
   },
   "projected_columns": [
     "invoice_id",
@@ -21,8 +29,5 @@
     "last_payment_date",
     "status"
   ],
-  "partitions": ["yyyy_mm"],
-  "parquet_views": {
-    "v_invoices_ledger": "v_invoices_ledger.parquet"
-  }
+  "partitions": ["tenant_id","yyyy_mm"]
 }

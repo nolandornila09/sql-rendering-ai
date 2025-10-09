@@ -4,38 +4,45 @@ WITH ar AS (
         CAST(as_of_date AS DATE) AS as_of_date,
         overdue_amount,
         yyyy_mm
-    FROM v_ar_aging_daily
+    FROM curated.v_ar_aging_daily
     WHERE tenant_id = @tenant_id
-      AND CAST(as_of_date AS DATE) BETWEEN CAST(@as_of_date AS DATE) - INTERVAL '@base_win DAYS'
+      AND CAST(as_of_date AS DATE) BETWEEN DATEADD(DAY, -@base_win, CAST(@as_of_date AS DATE))
                                       AND CAST(@as_of_date AS DATE)
-      AND yyyy_mm >= (YEAR(CAST(@as_of_date AS DATE) - INTERVAL '@base_win DAYS') * 100
-                      + MONTH(CAST(@as_of_date AS DATE) - INTERVAL '@base_win DAYS'))
+      AND yyyy_mm >= (YEAR(DATEADD(DAY, -@base_win, CAST(@as_of_date AS DATE))) * 100
+                      + MONTH(DATEADD(DAY, -@base_win, CAST(@as_of_date AS DATE))))
 )
-SELECT
+, spikes AS (
+    SELECT   
+        customer_id,
+        SUM(CASE WHEN as_of_date > DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                 THEN overdue_amount ELSE 0 END) AS overdue_14d,
+        SUM(CASE WHEN as_of_date <= DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                 THEN overdue_amount ELSE 0 END) AS overdue_prev_60d,
+        CASE
+            WHEN SUM(CASE WHEN as_of_date <= DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                          THEN overdue_amount ELSE 0 END) > 0
+            THEN 1.0 * SUM(CASE WHEN as_of_date > DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                                 THEN overdue_amount ELSE 0 END) /
+                 SUM(CASE WHEN as_of_date <= DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                          THEN overdue_amount ELSE 0 END) - 1.0
+            ELSE NULL
+        END AS spike_pct
+    FROM ar
+    GROUP BY customer_id
+    HAVING SUM(CASE WHEN as_of_date <= DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                    THEN overdue_amount ELSE 0 END) > 0
+       AND (1.0 * SUM(CASE WHEN as_of_date > DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE)) 
+                            THEN overdue_amount ELSE 0 END) /
+            SUM(CASE WHEN as_of_date <= DATEADD(DAY, -@short_win, CAST(@as_of_date AS DATE))
+                     THEN overdue_amount ELSE 0 END) - 1.0) >= @min_spike_pct
+)
+SELECT TOP (@limit)
     customer_id,
-    SUM(CASE WHEN as_of_date > (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-             THEN overdue_amount ELSE 0 END) AS overdue_14d,
-    SUM(CASE WHEN as_of_date <= (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-             THEN overdue_amount ELSE 0 END) AS overdue_prev_60d,
-    CASE
-        WHEN SUM(CASE WHEN as_of_date <= (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-                      THEN overdue_amount ELSE 0 END) > 0
-        THEN 1.0 * SUM(CASE WHEN as_of_date > (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-                             THEN overdue_amount ELSE 0 END) /
-             SUM(CASE WHEN as_of_date <= (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-                      THEN overdue_amount ELSE 0 END) - 1.0
-        ELSE NULL
-    END AS spike_pct
-FROM ar
-GROUP BY customer_id
-HAVING SUM(CASE WHEN as_of_date <= (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-                THEN overdue_amount ELSE 0 END) > 0
-   AND (1.0 * SUM(CASE WHEN as_of_date > (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-                        THEN overdue_amount ELSE 0 END) /
-        SUM(CASE WHEN as_of_date <= (CAST(@as_of_date AS DATE) - INTERVAL '@short_win DAYS') 
-                THEN overdue_amount ELSE 0 END) - 1.0) >= @min_spike_pct
+    overdue_14d,
+    overdue_prev_60d,
+    spike_pct
+FROM spikes
 ORDER BY  
-CASE WHEN @sort_direction = 'ASC'  THEN spike_pct
-         WHEN @sort_direction = 'DESC' THEN -spike_pct
-    END
-LIMIT @limit;
+    CASE WHEN @sort_direction = 'ASC'  THEN spike_pct
+         ELSE -spike_pct
+    END;

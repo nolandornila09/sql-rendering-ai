@@ -1,18 +1,27 @@
--- freight_ratio_anomalies.sql.tmpl
-SELECT
+WITH base AS (
+    SELECT 
+        order_id,
+        order_date,
+        net_amount,
+        freight_fee_amount,
+        CAST(freight_fee_amount AS DECIMAL(18,4)) / NULLIF(net_amount, 0) AS freight_ratio,
+        yyyy_mm
+    FROM curated.v_sales_lines
+    WHERE tenant_id = @tenant_id
+      AND CAST(order_date AS DATE) BETWEEN CAST(@from_date AS DATE) AND CAST(@to_date AS DATE)
+      AND net_amount >= COALESCE(@min_net, 0)
+      AND CAST(freight_fee_amount AS DECIMAL(18,4)) / NULLIF(net_amount, 0) >= @min_ratio
+)
+SELECT TOP (@limit)
     order_id,
     order_date,
     net_amount,
     freight_fee_amount,
-    CAST(freight_fee_amount AS DECIMAL) / NULLIF(net_amount, 0) AS freight_ratio,
+    freight_ratio,
     yyyy_mm
-FROM v_sales_lines
-WHERE tenant_id = @tenant_id
-  AND CAST(strptime(order_date, '%m/%d/%Y') AS DATE)  BETWEEN CAST( @from_date  AS DATE) AND CAST (@to_date  AS DATE)
-  AND net_amount >= COALESCE( @min_net , 0)
-  AND CAST(freight_fee_amount AS DECIMAL) / NULLIF(net_amount, 0) >=  @min_ratio
-ORDER BY  
-CASE WHEN @sort_direction = 'ASC'  THEN freight_ratio
-         WHEN @sort_direction = 'DESC' THEN -freight_ratio
-    END
-LIMIT @limit;
+FROM base
+ORDER BY 
+CASE 
+    WHEN @sort_direction = 'ASC' THEN freight_ratio
+    ELSE -freight_ratio
+END;
