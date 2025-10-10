@@ -3,7 +3,7 @@ import json
 import io
 import re
 import time
-import duckdb
+# import duckdb
 import pyarrow.parquet as pq
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
@@ -32,7 +32,7 @@ class QueryRequest(BaseModel):
     template_id: str
     params: dict
     template_dir: str           # where .sql.tmpl and .meta.json live
-    parquet_dir: str            # base parquet directory (ADLS/local/http)
+    # parquet_dir: str            # base parquet directory (ADLS/local/http)
 
 # -------------------------------
 # Middleware: Log API requests
@@ -59,16 +59,16 @@ async def log_requests(request: Request, call_next):
 # -------------------------------
 # Helpers
 # -------------------------------
-def download_parquet_blob(account_url, container_name, blob_name, credential):
-    try:
-        blob_service_client = BlobServiceClient(account_url=account_url, credential=credential)
-        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-        stream = io.BytesIO()
-        blob_client.download_blob().readinto(stream)
-        stream.seek(0)
-        return stream
-    except Exception as e:
-        raise RuntimeError(f"Azure Blob download failed: {str(e)}")
+# def download_parquet_blob(account_url, container_name, blob_name, credential):
+#     try:
+#         blob_service_client = BlobServiceClient(account_url=account_url, credential=credential)
+#         blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+#         stream = io.BytesIO()
+#         blob_client.download_blob().readinto(stream)
+#         stream.seek(0)
+#         return stream
+#     except Exception as e:
+#         raise RuntimeError(f"Azure Blob download failed: {str(e)}")
 
 
 def read_file_with_fallback(path: str, account_name: str, account_key: str) -> str:
@@ -85,18 +85,18 @@ def read_file_with_fallback(path: str, account_name: str, account_key: str) -> s
         raise RuntimeError(f"Failed to read file from {path}: {sdk_err}")
 
 
-def read_parquet_with_fallback(path: str, account_name: str, account_key: str):
-    try:
-        account_url = f"https://{account_name}.blob.core.windows.net"
-        container = path.split("://")[1].split("@")[0]
-        blob_path = path.split(".net/")[1]
-        stream = download_parquet_blob(account_url, container, blob_path, account_key)
+# def read_parquet_with_fallback(path: str, account_name: str, account_key: str):
+#     try:
+#         account_url = f"https://{account_name}.blob.core.windows.net"
+#         container = path.split("://")[1].split("@")[0]
+#         blob_path = path.split(".net/")[1]
+#         stream = download_parquet_blob(account_url, container, blob_path, account_key)
 
-        table = pq.read_table(stream)
-        df = duckdb.from_arrow(table).df()
-        return df
-    except Exception as sdk_err:
-        raise RuntimeError(f"Failed to read parquet from {path}: {sdk_err}")
+#         table = pq.read_table(stream)
+#         df = duckdb.from_arrow(table).df()
+#         return df
+#     except Exception as sdk_err:
+#         raise RuntimeError(f"Failed to read parquet from {path}: {sdk_err}")
 
 
 def render_sql(template_id: str, template_dir: str):
@@ -168,13 +168,77 @@ def validate_policy(params: dict, sql: str, policy: dict):
 
     return True
 
-
 def validate_params(meta: dict, params: dict):
     required = meta.get("required_filters", [])
+    defaults = meta.get("defaults", {})
+    formats = meta.get("param_formats", {})
+
+    # 1️⃣ Check required parameters
     for r in required:
         if r not in params:
             raise ValueError(f"Missing required param: {r}")
-    return {**meta.get("defaults", {}), **params}
+
+    # 2️⃣ Merge defaults
+    merged_params = {**defaults, **params}
+
+    # 3️⃣ Type validation based on param_formats
+    for key, fmt in formats.items():
+        if key not in merged_params:
+            continue
+
+        val = merged_params[key]
+        fmt_list = [f.strip().lower() for f in re.split(r"[,\|]", fmt)]  # support "decimal,integer"
+        valid = False
+
+        for fmt_lower in fmt_list:
+            try:
+                # strict integer: must be int type
+                if "integer" in fmt_lower and "strict" in fmt_lower:
+                    if isinstance(val, int):
+                        valid = True
+                        break
+
+                # integer: allow numeric string
+                elif "integer" in fmt_lower:
+                    if isinstance(val, int):
+                        valid = True
+                        break
+                    if isinstance(val, str) and val.isdigit():
+                        merged_params[key] = int(val)
+                        valid = True
+                        break
+
+                # decimal: allow int, float, or numeric string
+                elif "decimal" in fmt_lower:
+                    if isinstance(val, (int, float)):
+                        valid = True
+                        break
+                    if isinstance(val, str) and re.match(r"^-?\d+(\.\d+)?$", val):
+                        merged_params[key] = float(val)
+                        valid = True
+                        break
+
+                # date: enforce YYYY-MM-DD
+                elif "date" in fmt_lower:
+                    if isinstance(val, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", val):
+                        datetime.strptime(val, "%Y-%m-%d")
+                        valid = True
+                        break
+
+                # string
+                elif "string" in fmt_lower:
+                    if isinstance(val, str):
+                        valid = True
+                        break
+
+            except Exception:
+                continue
+
+        if not valid:
+            allowed = ", ".join(fmt_list)
+            raise ValueError(f"Param '{key}' invalid type: expected one of ({allowed}), got {type(val).__name__}")
+
+    return merged_params
 
 
 def substitute_params(sql_template: str, params: dict):
@@ -195,7 +259,7 @@ def normalize_date(d: str) -> str:
 # Execute SQL with Telemetry
 # -------------------------------
 
-def execute_sql(sql_template: str, meta: dict, params: dict, parquet_dir: str, policy: dict):
+def execute_sql(sql_template: str, meta: dict, params: dict,  policy: dict):
     # Build final SQL
     final_sql = substitute_params(sql_template, params)
     print(final_sql)
@@ -204,17 +268,18 @@ def execute_sql(sql_template: str, meta: dict, params: dict, parquet_dir: str, p
 
     # Connection string (from env)
     # conn_str = os.getenv("SYNAPSE_ODBC_CONN")
-    conn_str = (
-    "Driver={ODBC Driver 17 for SQL Server};"
-    "Server=tcp:phoenix-dev-workspace.sql.azuresynapse.net,1433;"
-    "Database=dedicated_SQLPool_dev;"
-    "Authentication=ActiveDirectoryInteractive;"
-    "UID=nitishgirkar@ClickTekConsultingInc.onmicrosoft.com;"
-    "PWD=Zavadya@2022;"
-    "Encrypt=yes;"
-    "TrustServerCertificate=no;"
-    "Connection Timeout=30;"
-)
+#     conn_str = (
+#     "Driver={ODBC Driver 17 for SQL Server};"
+#     "Server=tcp:phoenix-dev-workspace.sql.azuresynapse.net,1433;"
+#     "Database=dedicated_SQLPool_dev;"
+#     "Authentication=ActiveDirectoryInteractive;"
+#     "UID=nitishgirkar@ClickTekConsultingInc.onmicrosoft.com;"
+#     "PWD=Zavadya@2022;"
+#     "Encrypt=yes;"
+#     "TrustServerCertificate=no;"
+#     "Connection Timeout=30;"
+# )
+    conn_str = os.environ["SQL_CONN_STR"]
     if not conn_str:
         raise RuntimeError("Missing SYNAPSE_ODBC_CONN in environment")
 
@@ -223,7 +288,7 @@ def execute_sql(sql_template: str, meta: dict, params: dict, parquet_dir: str, p
     results = []
 
     try:
-        with pyodbc.connect(conn_str) as conn:
+        with pyodbc.connect(conn_str, autocommit=True) as conn:
             with conn.cursor() as cur:
                 cur.execute(final_sql)
                 columns = [col[0] for col in cur.description] if cur.description else []
@@ -272,8 +337,7 @@ def run_query(request: QueryRequest):
         rendered = render_sql(request.template_id, request.template_dir)
         final_params = validate_params(rendered["meta"], request.params)
         result = execute_sql(
-            rendered["sql_template"], rendered["meta"], final_params,
-            request.parquet_dir, rendered["policy"]
+            rendered["sql_template"], rendered["meta"], final_params,rendered["policy"]
         )
         return {"status": "ok", "data": result}
     except Exception as e:
