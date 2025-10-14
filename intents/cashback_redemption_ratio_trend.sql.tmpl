@@ -6,7 +6,7 @@ WITH weekly_cashback AS (
         yyyy_mm,
         SUM(accrued_amount) AS accrued,
         SUM(redeemed_amount) AS redeemed
-    FROM curated.v_cashback_events_daily
+    FROM curated.v_cashback_balance_daily
     WHERE tenant_id = @tenant_id
       AND CAST(as_of_date AS DATE)
             BETWEEN DATEADD(DAY,-(@weeks * 7),CAST(@as_of_date AS DATE) )

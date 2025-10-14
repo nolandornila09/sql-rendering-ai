@@ -17,7 +17,7 @@ weekly_median AS (
             WITHIN GROUP (ORDER BY days_to_pay)
             OVER (PARTITION BY customer_id, week_start) AS median_days_to_pay
     FROM base
-    GROUP BY customer_id, week_start
+    GROUP BY customer_id, week_start,days_to_pay
 ),
 drift AS (
     SELECT

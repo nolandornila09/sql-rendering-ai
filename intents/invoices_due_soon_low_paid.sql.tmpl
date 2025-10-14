@@ -11,27 +11,38 @@ WITH base_invoices AS (
         yyyy_mm
     FROM curated.v_invoices_ledger
     WHERE tenant_id = @tenant_id
-      AND CAST(due_date AS DATE) BETWEEN CAST(@as_of_date AS DATE)
-                                      AND DATEADD(DAY,@due_in_days,CAST(@as_of_date AS DATE))
+      AND CAST(due_date AS DATE)
+            BETWEEN CAST(@as_of_date AS DATE)
+                AND DATEADD(DAY, @due_in_days, CAST(@as_of_date AS DATE))
       AND amount >= @min_amount
+),
+calc AS (
+    SELECT
+        invoice_id,
+        customer_id,
+        invoice_date,
+        due_date,
+        amount,
+        paid_to_date,
+        ROUND(paid_to_date / NULLIF(amount, 0), 2) AS paid_ratio,
+        (1 - (paid_to_date / NULLIF(amount, 0))) AS unpaid_ratio,
+        last_payment_date,
+        status
+    FROM base_invoices
 )
-SELECT TOP @limit
+SELECT TOP (@limit)
     invoice_id,
     customer_id,
     invoice_date,
     due_date,
     amount,
     paid_to_date,
-    ROUND(paid_to_date / NULLIF(amount, 0), 2) AS paid_ratio,
-    (1 - (paid_to_date / NULLIF(amount, 0))) AS unpaid_ratio,
+    paid_ratio,
+    unpaid_ratio,
     last_payment_date,
     status
-FROM base_invoices
-WHERE (1 - (paid_to_date / NULLIF(amount, 0))) >= @min_unpaid_pct
-ORDER BY  
-CASE WHEN @sort_direction = 'ASC'  THEN due_date
-         ELSE -due_date
-    END,
-CASE WHEN @sort_direction = 'ASC'  THEN unpaid_ratio
-         ELSE -unpaid_ratio
-    END;
+FROM calc
+WHERE unpaid_ratio >= @min_unpaid_pct
+ORDER BY 
+ due_date ,
+    CASE WHEN @sort_direction = 'ASC' THEN unpaid_ratio ELSE -unpaid_ratio END;
