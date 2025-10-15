@@ -16,5 +16,13 @@
     "sort_direction" : "string",
     "limit" : "integer"
   },
+  "projected_columns": [
+    "order_id",
+    "order_date",
+    "net_amount",
+    "freight_amount",
+    "freight_ratio",
+    "yyyy_mm"
+  ],
    "partitions": ["tenant_id","yyyy_mm"]
   }

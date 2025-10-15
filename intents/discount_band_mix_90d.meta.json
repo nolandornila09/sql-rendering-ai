@@ -13,7 +13,7 @@
     "sort_direction" : "string",
     "limit" : "integer"
   },
-  "output_columns": [
+  "projected_columns": [
     "discount_band",
     "gmv_per_band",
     "pct_of_total_gmv"

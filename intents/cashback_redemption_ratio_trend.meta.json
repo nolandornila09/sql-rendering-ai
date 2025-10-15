@@ -13,7 +13,7 @@
     "sort_direction" : "string",
     "limit" : "integer"
   },
-  "output_columns": [
+  "projected_columns": [
     "tenant_id",
     "year_no",
     "week_no",
