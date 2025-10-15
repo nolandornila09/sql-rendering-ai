@@ -1,5 +1,5 @@
 {
-  "name": "freight_ratio_anomalies",
+  "template_id": "freight_ratio_anomalies",
   "required_filters": ["tenant_id","from_date","to_date","min_ratio","min_net"],
   "defaults": {
     "min_ratio": 0.15,

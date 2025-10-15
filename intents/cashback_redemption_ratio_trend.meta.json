@@ -13,6 +13,15 @@
     "sort_direction" : "string",
     "limit" : "integer"
   },
+  "output_columns": [
+    "tenant_id",
+    "year_no",
+    "week_no",
+    "yyyy_mm",
+    "accrued",
+    "redeemed", 
+    "redemption_ratio"
+  ],
   "partitions": [
     "tenant_id",
     "yyyy_mm"
