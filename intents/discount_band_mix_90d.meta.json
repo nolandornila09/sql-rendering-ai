@@ -8,7 +8,7 @@
   },
  "param_formats": {
     "tenant_id": "string",
-    "from_date": "date (YYYY-MM-DD)",
+    "as_of_date": "date (YYYY-MM-DD)",
     "window_days": "integer",
     "sort_direction" : "string",
     "limit" : "integer"

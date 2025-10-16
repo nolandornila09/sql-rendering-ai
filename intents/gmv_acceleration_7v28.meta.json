@@ -1,5 +1,5 @@
 {
-  "template_id": "gmv_acceleration_7v28.sql",
+  "template_id": "gmv_acceleration_7v28",
    "required_filters": ["tenant_id", "as_of_date"],
   "defaults": { 
     "short_win": 14, 
