@@ -176,3 +176,10 @@ Payload :
   "template_dir": "abfss://container-cci-bc-cronus@phoenixadls.dfs.core.windows.net/Templates"
 }
 
+Dynamic Query
+Endpoint : https://phoenix-templated-sql-gkdug6f2aqg6eufp.southeastasia-01.azurewebsites.net/execute
+Payload :
+{
+	"sql": "select TOP 10 * FROM curated.dim_customer where tenant_id = '17e754f1-d051-40fc-8fb0-99c84e16a51d'"
+}
+
