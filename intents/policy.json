@@ -1,9 +1,178 @@
-    {
-    "rules": {
-        "max_window_days": 365,
-        "disallow_future_as_of": true,
-        "row_limit": 10000,
-        "allowed_actions": ["SELECT","WITH"],
-        "disallowed_actions": ["DELETE","TRUNCATE","UPDATE","INSERT","DROP","ALTER","CREATE"]
+{
+  "version": "2.0",
+  "last_updated": "2025-12-01",
+  
+  "rules": {
+
+    "query_behavior": {
+      "max_window_days": 365,
+      "disallow_future_as_of": true,
+      "row_limit": 10000,
+      "allowed_actions": ["SELECT", "WITH"],
+      "disallowed_actions": ["DELETE", "TRUNCATE", "UPDATE", "INSERT", "DROP", "ALTER", "CREATE"],
+      "disallow_multi_statement": true
+    },
+
+    "sql_injection": {
+      "disallow_comment_sequences": ["--", "/*", "*/"],
+      "disallow_delimiters": [";", "\\"],
+      "disallow_boolean_tautologies": ["1=1", "OR 1=1", "' OR '1'='1"],
+      "disallow_union_queries": true,
+      "disallow_dynamic_sql": true,
+      "require_parameterized_queries": true
+    },
+
+    "entity_access": {
+      "allowed_tables": [],
+      "allowed_columns_per_table": {},
+      "disallow_unknown_tables": true,
+      "disallow_unknown_columns": true
+    },
+
+    "security": {
+      "require_tenant_id": true,
+      "tenant_id_parameter": "tenant_id",
+      "prevent_cross_tenant_access": true,
+      "disallow_select_star": true,
+      "allowed_string_operations": ["CONCAT", "SUBSTRING", "TRIM", "UPPER", "LOWER"],
+      "disallowed_string_operations": ["+", "||"]
+    },
+
+    "join_rules": {
+      "allowed_joins": ["INNER", "LEFT"],
+      "disallowed_joins": ["RIGHT", "FULL", "CROSS"],
+      "require_explicit_join_condition": true,
+      "validate_pk_fk_relationship": true,
+      "max_join_count": 3,
+      "disallow_cross_joins": true,
+      "max_join_selectivity_ratio": 1000
+    },
+
+    "query_shape": {
+      "max_cte_count": 5,
+      "allow_recursive_cte": false,
+      "max_subquery_depth": 2,
+      "disallow_subqueries_in_select": true
+    },
+
+    "performance": {
+      "require_date_bounds": true,
+      "date_column": "as_of_date",
+      "require_partition_pruning": true,
+      "partition_column": "yyyy_mm",
+      "disallow_leading_wildcards": true,
+      "require_limit_for_non_aggregated": true,
+      "max_order_by_columns": 3,
+      "disallow_order_by_without_limit": true
+    },
+
+    "limit_rules": {
+      "max_limit_value": 10000,
+      "default_limit_value": 500,
+      "force_limit_when_missing": true
+    },
+
+    "filter_validation": {
+      "require_where_clause_for_sensitive_tables": true,
+      "validate_operator_types": true,
+      "disallow_unbounded_filters": true,
+      "validate_filter_column_datatypes": true
+    },
+
+    "data_governance": {
+      "restricted_tables": [
+        "user_credentials",
+        "payment_info",
+        "personal_data",
+        "audit_log",
+        "system_config",
+        "api_keys"
+      ],
+      "pii_columns": [
+        "ssn",
+        "social_security",
+        "credit_card",
+        "email",
+        "phone",
+        "address"
+      ],
+      "require_authorization_comment": true,
+      "require_pii_approval_comment": true,
+      "audit_log_required_for_tables": [
+        "user_credentials",
+        "payment_info"
+      ]
+    },
+
+    "ordering_rules": {
+      "disallow_order_by_without_limit": true,
+      "max_order_by_columns": 3
+    },
+
+    "aggregation_rules": {
+      "require_group_by_for_aggregates": true,
+      "allow_distinct": true,
+      "max_group_by_columns": 5,
+      "disallow_aggregate_without_filter": true
+    },
+
+    "column_rules": {
+      "max_column_count": 50,
+      "disallow_duplicate_columns": true
+    },
+
+    "function_whitelist": {
+      "allowed_math_functions": ["ABS", "ROUND", "CEIL", "FLOOR"],
+      "allowed_analytic_functions": ["ROW_NUMBER", "RANK"],
+      "disallowed_functions": ["RAND", "RANDOM", "MD5", "HASH", "NTILE"]
+    },
+
+    "template_validation": {
+      "required_parameters": ["tenant_id"],
+      "require_business_logic_docs": true,
+      "complexity_threshold_for_docs": {
+        "case_statements": 2,
+        "cte_count": 2,
+        "window_functions": 1
+      },
+      "allowed_parameter_prefixes": ["@", "$", ":"],
+      "parameter_naming_convention": "snake_case"
+    },
+
+    "code_quality": {
+      "max_query_lines": 500,
+      "max_nesting_depth": 4,
+      "require_formatting": false,
+      "disallow_empty_comments": true,
+      "require_descriptive_aliases": true,
+      "min_alias_length": 2
     }
+  },
+
+  "exemptions": {
+    "templates": {
+      "system_health_check.sql.tmpl": {
+        "exempt_from": ["require_tenant_id"],
+        "reason": "System-wide health check query"
+      }
     }
+  },
+
+  "enforcement": {
+    "blocking_violations": [
+      "require_tenant_id",
+      "disallowed_actions",
+      "disallow_dynamic_sql",
+      "prevent_cross_tenant_access",
+      "disallow_unknown_tables",
+      "disallow_unknown_columns",
+      "disallow_union_queries",
+      "disallow_cross_joins",
+      "require_partition_pruning"
+    ],
+    "warning_violations": [
+      "require_business_logic_docs",
+      "require_descriptive_aliases"
+    ]
+  }
+}
