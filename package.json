@@ -1,0 +1,37 @@
+{
+  "name": "sql-rendering-ai",
+  "version": "1.0.0",
+  "description": "sql rendering",
+  "main": "jest.config.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "qa:all": "npm run test:contract && npm run test:guardrail",
+    "test": "jest --runInBand",
+    "test:contract": "jest tests/contract --runInBand",
+    "test:guardrail": "jest tests/guardrail --runInBand"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nolandornila09/sql-rendering-ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nolandornila09/sql-rendering-ai/issues"
+  },
+  "homepage": "https://github.com/nolandornila09/sql-rendering-ai#readme",
+  "dependencies": {
+    "tsc": "^2.0.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3"
+  }
+}
